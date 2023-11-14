@@ -1,7 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+from torchsummary import summary
+from thop import profile, clever_format
 
 class Mnist_2NN(nn.Module):
     def __init__(self):
@@ -18,7 +19,7 @@ class Mnist_2NN(nn.Module):
 
 
 class Mnist_CNN(nn.Module):
-    def __init__(self):
+    def __init__(self) :
         super().__init__()
         self.conv1 = nn.Conv2d(in_channels=1, out_channels=32, kernel_size=5, stride=1, padding=2)
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2, padding=0)
@@ -38,3 +39,14 @@ class Mnist_CNN(nn.Module):
         tensor = self.fc2(tensor)
         return tensor
 
+if __name__ == '__main__':
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    net = Mnist_CNN().to(device)
+    input_shape = (3, 224, 224)
+    summary(net, input_shape)
+
+    input_tensor = torch.randn(1, *input_shape).to(device)
+    flops, params = profile(net, inputs=(input_tensor,))
+    flops, params = clever_format([flops, params], "%.3f")
+    print("FLOPs: %s" % (flops))
+    print("params: %s" % (params))

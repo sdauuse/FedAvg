@@ -7,20 +7,22 @@ import torch.nn.functional as F
 from torch import optim
 from Models import Mnist_2NN, Mnist_CNN
 from clients import ClientsGroup, client
-
+import time
+import psutil
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter, description="FedAvg")
 parser.add_argument('-g', '--gpu', type=str, default='0', help='gpu id to use(e.g. 0,1,2,3)')
 parser.add_argument('-nc', '--num_of_clients', type=int, default=100, help='numer of the clients')
-parser.add_argument('-cf', '--cfraction', type=float, default=0.1, help='C fraction, 0 means 1 client, 1 means total clients')
+parser.add_argument('-cf', '--cfraction', type=float, default=0.1,
+                    help='C fraction, 0 means 1 client, 1 means total clients')
 parser.add_argument('-E', '--epoch', type=int, default=5, help='local train epoch')
 parser.add_argument('-B', '--batchsize', type=int, default=10, help='local train batch size')
-parser.add_argument('-mn', '--model_name', type=str, default='mnist_2nn', help='the model to train')
+parser.add_argument('-mn', '--model_name', type=str, default='mnist_cnn', help='the model to train')
 parser.add_argument('-lr', "--learning_rate", type=float, default=0.01, help="learning rate, \
                     use value from origin paper as default")
 parser.add_argument('-vf', "--val_freq", type=int, default=5, help="model validation frequency(of communications)")
 parser.add_argument('-sf', '--save_freq', type=int, default=20, help='global model save frequency(of communication)')
-parser.add_argument('-ncomm', '--num_comm', type=int, default=1000, help='number of communications')
+parser.add_argument('-ncomm', '--num_comm', type=int, default=100, help='number of communications')
 parser.add_argument('-sp', '--save_path', type=str, default='./checkpoints', help='the saving path of checkpoints')
 parser.add_argument('-iid', '--IID', type=int, default=0, help='the way to allocate data to clients')
 
@@ -30,7 +32,18 @@ def test_mkdir(path):
         os.mkdir(path)
 
 
-if __name__=="__main__":
+if __name__ == "__main__":
+    start_time = time.time()
+    # 获取Python程序的进程ID
+    pid = os.getpid()
+    # 实例化进程对象
+    process = psutil.Process(pid)
+    # 获取进程使用的内存，返回字节单位
+    # memory_usage = process.memory_info().rss
+    # 将字节转换为兆字节
+    # memory_usage_mb = memory_usage / 1024 / 1024
+    # print("Python程序使用的内存为：", memory_usage_mb, "MB")
+
     args = parser.parse_args()
     args = args.__dict__
 
@@ -63,7 +76,16 @@ if __name__=="__main__":
         global_parameters[key] = var.clone()
 
     for i in range(args['num_comm']):
-        print("communicate round {}".format(i+1))
+        # 计算当前占用内存
+        memory_usage = process.memory_info().rss
+        # 转换为MB
+        memory_usage_mb = memory_usage / 1024 / 1024
+        # my memory capacity
+        memory_total = 8 * 1024 * 1024 * 1024
+        # 内存占用百分比
+        memory_percentage = memory_usage / memory_total * 100
+        print("communicate round {}".format(i + 1), "\t memory cos", memory_usage_mb, "MB", "\t内存占用百分比",
+              "{:.2f}".format(memory_percentage), "%")
 
         order = np.random.permutation(args['num_of_clients'])
         clients_in_comm = ['client{}'.format(i) for i in order[0:num_in_comm]]
@@ -105,3 +127,7 @@ if __name__=="__main__":
                                                                                                 args['num_of_clients'],
                                                                                                 args['cfraction'])))
 
+    end_time = time.time()
+    time_diff = end_time - start_time
+
+    print("时间差为：", time_diff, "秒")
