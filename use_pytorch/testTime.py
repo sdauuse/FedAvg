@@ -8,12 +8,13 @@ import cv2
 
 if __name__ == '__main__':
 
-    for i in range(10):
+    for i in range(50):
+
         start_time = time.time()
 
         # 执行一些操作
 
-        time.sleep(1)
+        time.sleep(5)
         end_time = time.time()
         time_diff = end_time - start_time
 
